@@ -1,0 +1,46 @@
+name: Tizen Signer V4
+on:
+  workflow_dispatch:
+
+jobs:
+  sign:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: Download Tizen CLI Manual
+        run: |
+          # Baixa apenas as ferramentas de CLI essenciais
+          wget http://download.tizen.org/sdk/tizenstudio/official/binary/web-cli_Tizen_Studio_5.1_ubuntu-64.bin
+          chmod +x web-cli_Tizen_Studio_5.1_ubuntu-64.bin
+          ./web-cli_Tizen_Studio_5.1_ubuntu-64.bin --accept-license /home/runner/tizen-cli
+          # Adiciona ao caminho do sistema
+          echo "/home/runner/tizen-cli/tools/ide/bin" >> $GITHUB_PATH
+
+      - name: Create Certificate and Sign
+        run: |
+          # Criar diretório para o certificado se não existir
+          mkdir -p /home/runner/tizen-studio-data/keystore/author
+          
+          # 1. Gerar o certificado
+          /home/runner/tizen-cli/tools/ide/bin/tizen certificate -a Felipe -p 1234 -c KR -s Seoul -ct Gangnam -o Home -n "Felipe" -e felipe@test.com
+          
+          # 2. Criar o perfil de segurança
+          /home/runner/tizen-cli/tools/ide/bin/tizen security-profiles add -n PerfilFelipe -p /home/runner/tizen-studio-data/keystore/author/Felipe.p12 -pw 1234
+          
+          # 3. Assinar o arquivo
+          /home/runner/tizen-cli/tools/ide/bin/tizen package -t wgt -s PerfilFelipe -- *.wgt
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Eclipse-Assinado-Final
+          path: "*.wgt"
+          
