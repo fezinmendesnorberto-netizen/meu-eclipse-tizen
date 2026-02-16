@@ -1,0 +1,39 @@
+name: Tizen Signer Ninja V2
+on:
+  workflow_dispatch:
+
+jobs:
+  sign_wgt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: Install Tizen CLI
+        run: |
+          wget https://download.tizen.org/sdk/tizenstudio/official/binary/web-cli_Tizen_Studio_5.1_ubuntu-64.bin
+          chmod +x web-cli_Tizen_Studio_5.1_ubuntu-64.bin
+          ./web-cli_Tizen_Studio_5.1_ubuntu-64.bin --accept-license /home/runner/tizen-cli
+          echo "/home/runner/tizen-cli/tools/ide/bin" >> $GITHUB_PATH
+
+      - name: Create Certificate and Sign
+        run: |
+          # Criar o certificado
+          tizen certificate -a Felipe -p 1234 -c KR -s Seoul -ct Gangnam -o Home -n "Felipe" -e felipe@test.com
+          # Criar o perfil de segurança
+          tizen security-profiles add -n PerfilFelipe -p /home/runner/tizen-studio-data/keystore/author/Felipe.p12 -pw 1234
+          # Assinar o arquivo (usando o * para pegar qualquer .wgt)
+          tizen package -t wgt -s PerfilFelipe -- *.wgt
+
+      - name: Upload Signed WGT
+        uses: actions/upload-artifact@v4
+        with:
+          name: Eclipse-Assinado
+          path: "*.wgt"
+          
