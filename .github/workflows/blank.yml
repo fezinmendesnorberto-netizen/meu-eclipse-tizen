@@ -1,0 +1,36 @@
+name: Sign Tizen WGT Docker
+on:
+  workflow_dispatch:
+
+jobs:
+  sign-wgt:
+    runs-on: ubuntu-latest
+    # Aqui está o segredo: usar a imagem oficial da Samsung que já tem tudo
+    container:
+      image: ghcr.io/samsung/tizen-studio-cli:latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create Certificates and Profile
+        run: |
+          # 1. Criar o certificado de autor
+          tizen certificate -a Felipe -p 1234 -c KR -s Seoul -ct Gangnam -o Home -n "Felipe" -e felipe@test.com
+          
+          # 2. Criar o perfil de segurança (O tizen armazena em /root/tizen-studio-data/)
+          tizen security-profiles add -n PerfilFelipe -p /root/tizen-studio-data/keystore/author/Felipe.p12 -pw 1234
+
+      - name: Sign WGT package
+        run: |
+          mkdir -p signed
+          # Assinar o arquivo (garanta que o arquivo se chama eclipse.wgt na pasta principal)
+          tizen package -t wgt -s PerfilFelipe -- eclipse.wgt
+          mv eclipse.wgt signed/
+
+      - name: Upload signed artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Eclipse-Assinado-Docker
+          path: signed/
+          
