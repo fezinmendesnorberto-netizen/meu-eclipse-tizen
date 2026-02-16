@@ -1,0 +1,42 @@
+name: Tizen Signer Final
+on:
+  workflow_dispatch:
+
+jobs:
+  sign:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: Install Tizen CLI (Fast)
+        run: |
+          # Baixa uma versão compacta de um mirror alternativo
+          curl -L https://github.com/TizenTeam/tizen-cli-tool/raw/master/tizen-web-cli_Tizen_Studio_5.0_ubuntu-64.zip -o tizen.zip
+          unzip tizen.zip -d tizen-cli
+          chmod +x tizen-cli/tools/ide/bin/tizen
+          echo "$(pwd)/tizen-cli/tools/ide/bin" >> $GITHUB_PATH
+
+      - name: Sign WGT
+        run: |
+          # 1. Gerar certificado
+          ./tizen-cli/tools/ide/bin/tizen certificate -a Felipe -p 1234 -c KR -s Seoul -ct Gangnam -o Home -n "Felipe" -e felipe@test.com
+          
+          # 2. Perfil
+          ./tizen-cli/tools/ide/bin/tizen security-profiles add -n PerfilFelipe -p ./tizen-cli/tools/ide/bin/keystore/author/Felipe.p12 -pw 1234
+          
+          # 3. Assinar (Certifique-se de que o arquivo no GitHub se chama eclipse.wgt)
+          ./tizen-cli/tools/ide/bin/tizen package -t wgt -s PerfilFelipe -- eclipse.wgt
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: Eclipse-Final-Assinado
+          path: "*.wgt"
+          
